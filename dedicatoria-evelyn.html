@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#09070d" />
+    <title>Para Eve</title>
+
+    <link rel="icon" href="ghostfac.webp" />
+    <style>
+      :root {
+        --bg: #09070d;
+        --text: #f7eef4;
+        --muted: #c3aab9;
+        --pink: #e0799f;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+      }
+      body {
+        font-family: Georgia, "Times New Roman", serif;
+        overflow-x: hidden;
+        min-height: 100svh;
+      }
+
+      /* ===== AURORA DE FUNDO ===== */
+      .aurora {
+        position: fixed;
+        inset: -20%;
+        z-index: 0;
+        background:
+          radial-gradient(
+            40% 35% at 25% 30%,
+            rgba(170, 50, 110, 0.45),
+            transparent 70%
+          ),
+          radial-gradient(
+            35% 40% at 75% 25%,
+            rgba(110, 40, 140, 0.4),
+            transparent 70%
+          ),
+          radial-gradient(
+            45% 40% at 50% 85%,
+            rgba(200, 80, 130, 0.35),
+            transparent 70%
+          );
+        filter: blur(60px);
+        animation: drift 22s ease-in-out infinite alternate;
+      }
+
+      /* ===== CAPA DE SURPRESA (rasgada ao abrir) ===== */
+      .cover {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: #09070d;
+        cursor: pointer;
+        transition:
+          opacity 0.6s ease,
+          visibility 0.6s;
+        -webkit-tap-highlight-color: transparent;
+        overflow: hidden;
+      }
+      .cover.gone {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .cover-half {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(ellipse at center, #2a1024 0%, #09070d 70%);
+        filter: drop-shadow(0 0 14px rgba(224, 121, 159, 0.25));
+      }
+      .cover-half.top {
+        clip-path: polygon(
+          0 0,
+          100% 0,
+          100% 50%,
+          87.5% 46%,
+          75% 54%,
+          62.5% 46%,
+          50% 54%,
+          37.5% 46%,
+          25% 54%,
+          12.5% 46%,
+          0 50%
+        );
+      }
+      .cover-half.bottom {
+        clip-path: polygon(
+          0 50%,
+          12.5% 46%,
+          25% 54%,
+          37.5% 46%,
+          50% 54%,
+          62.5% 46%,
+          75% 54%,
+          87.5% 46%,
+          100% 50%,
+          100% 100%,
+          0 100%
+        );
+      }
+
+      .cover.tearing .cover-half.top {
+        animation: tearTop 1s cubic-bezier(0.3, 0.6, 0.3, 1) forwards;
+      }
+      .cover.tearing .cover-half.bottom {
+        animation: tearBottom 1s cubic-bezier(0.3, 0.6, 0.3, 1) forwards;
+      }
+
+      .cover-inner {
+        text-align: center;
+        padding: 24px;
+      }
+      .heart {
+        font-size: 3.6rem;
+        color: var(--pink);
+        display: inline-block;
+        animation: beat 1.8s ease-in-out infinite;
+        filter: drop-shadow(0 0 22px rgba(224, 121, 159, 0.6));
+      }
+      .cover-text {
+        margin-top: 22px;
+        font:
+          0.75rem/1.6 system-ui,
+          sans-serif;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: #d6b8c8;
+      }
+      .cover-hint {
+        margin-top: 40px;
+        font:
+          0.7rem system-ui,
+          sans-serif;
+        letter-spacing: 0.15em;
+        color: rgba(195, 170, 185, 0.6);
+        animation: blink 2.4s ease-in-out infinite;
+      }
+
+      /* ===== CANVAS E EFEITOS ===== */
+      #fx {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+      }
+      .vignette {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at 50% 42%,
+          transparent 0%,
+          rgba(8, 5, 11, 0.2) 50%,
+          rgba(5, 3, 8, 0.9) 100%
+        );
+      }
+
+      /* ===== FRASES ESPALHADAS E QUE FICAM NA TELA ===== */
+      .lyric-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        pointer-events: none;
+      }
+      .lyric {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: max-content;
+        max-width: min(300px, 70vw);
+        padding: 10px 16px;
+        text-align: center;
+        font-style: italic;
+        font-size: clamp(0.95rem, 2.8vw, 1.15rem);
+        line-height: 1.45;
+        color: #fbeef5;
+        text-shadow:
+          0 0 14px rgba(224, 121, 159, 0.6),
+          0 2px 8px rgba(0, 0, 0, 0.8);
+        background: rgba(12, 8, 16, 0.35);
+        border: 1px solid rgba(224, 121, 159, 0.18);
+        border-radius: 14px;
+        backdrop-filter: blur(6px);
+        opacity: 0;
+        filter: blur(8px);
+        transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(0.94);
+        transition:
+          opacity 1.2s ease,
+          filter 1.2s ease,
+          transform 1.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+      }
+      .lyric.show {
+        opacity: 1;
+        filter: blur(0);
+        transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1);
+        animation: float 6s ease-in-out infinite alternate;
+      }
+      /* Frases mais antigas ficam mais apagadas */
+      .lyric.old {
+        opacity: 0.5;
+        animation: none;
+      }
+
+      /* ===== CONTEÚDO ===== */
+      main {
+        position: relative;
+        z-index: 3;
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        padding: 64px 22px;
+      }
+      .card {
+        width: min(100%, 650px);
+        text-align: center;
+        padding: clamp(28px, 6vw, 58px) clamp(20px, 5vw, 48px);
+        border: 1px solid rgba(224, 119, 159, 0.22);
+        background: linear-gradient(
+          145deg,
+          rgba(30, 14, 30, 0.55),
+          rgba(12, 8, 16, 0.5)
+        );
+        backdrop-filter: blur(14px);
+        border-radius: 18px;
+        box-shadow:
+          0 25px 100px rgba(0, 0, 0, 0.4),
+          inset 0 0 40px rgba(224, 121, 159, 0.05);
+        opacity: 0;
+      }
+      .card.reveal {
+        animation: rise 1.8s ease both;
+      }
+      .eyebrow,
+      .label {
+        font:
+          0.68rem/1.5 system-ui,
+          sans-serif;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: #d6b8c8;
+      }
+      .eyebrow {
+        margin-bottom: 22px;
+      }
+
+      /* ===== FOTO ===== */
+      .photo {
+        display: block;
+        width: min(52%, 220px);
+        aspect-ratio: 3 / 4;
+        object-fit: cover;
+        margin: 26px auto 0;
+        border-radius: 14px;
+        border: 1px solid rgba(224, 119, 159, 0.35);
+        box-shadow:
+          0 0 40px rgba(224, 121, 159, 0.25),
+          0 20px 50px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        transform: scale(0.96);
+      }
+      .card.reveal .photo {
+        animation: photoIn 2s ease 4s forwards;
+      }
+
+      h1 {
+        font-weight: 400;
+        font-size: clamp(3.5rem, 13vw, 6.3rem);
+        letter-spacing: 0.045em;
+        margin-bottom: 24px;
+        background: linear-gradient(
+          100deg,
+          #f7d4e2 0%,
+          #e0799f 35%,
+          #fff 50%,
+          #e0799f 65%,
+          #f7d4e2 100%
+        );
+        background-size: 250% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: shimmer 6s linear infinite;
+        filter: drop-shadow(0 0 22px rgba(224, 121, 159, 0.35));
+      }
+      .message {
+        font-size: clamp(1.03rem, 3.2vw, 1.2rem);
+        line-height: 1.9;
+        font-style: italic;
+        color: #f7eef4;
+        margin: 0 auto 35px;
+        max-width: 510px;
+      }
+      .message p {
+        opacity: 0;
+        transform: translateY(14px);
+        filter: blur(4px);
+      }
+      .card.reveal .message p {
+        animation: reveal 1.4s ease forwards;
+      }
+      .card.reveal .message p:nth-child(1) {
+        animation-delay: 0.8s;
+      }
+      .card.reveal .message p:nth-child(2) {
+        animation-delay: 2s;
+      }
+      .card.reveal .message p:nth-child(3) {
+        animation-delay: 3.2s;
+      }
+      .song {
+        border-top: 1px solid rgba(224, 121, 159, 0.3);
+        padding-top: 25px;
+      }
+      .label {
+        margin-bottom: 9px;
+      }
+      .song-title {
+        font-size: 1.6rem;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+      }
+      .artist {
+        font:
+          0.88rem system-ui,
+          sans-serif;
+        color: var(--muted);
+        margin-top: 5px;
+      }
+      .equalizer {
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        opacity: 0.8;
+        margin-top: 18px;
+      }
+      .equalizer i {
+        display: block;
+        width: 3px;
+        height: 5px;
+        border-radius: 4px;
+        background: linear-gradient(to top, #b8457a, #f7b6cf);
+        box-shadow: 0 0 8px rgba(224, 121, 159, 0.5);
+      }
+      .playing .equalizer i {
+        animation: equalize 0.7s ease-in-out infinite alternate;
+      }
+      .equalizer i:nth-child(2n) {
+        animation-delay: -0.3s;
+      }
+      .equalizer i:nth-child(3n) {
+        animation-delay: -0.55s;
+      }
+      .equalizer i:nth-child(4n) {
+        animation-delay: -0.15s;
+      }
+      .volume {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 22px;
+        color: var(--muted);
+        font:
+          0.75rem system-ui,
+          sans-serif;
+      }
+      input[type="range"] {
+        width: 100px;
+        accent-color: var(--pink);
+      }
+      .pause-btn {
+        margin-top: 18px;
+        font:
+          0.8rem system-ui,
+          sans-serif;
+        letter-spacing: 0.08em;
+        color: var(--text);
+        border: 1px solid rgba(224, 119, 159, 0.75);
+        background: rgba(194, 72, 119, 0.13);
+        border-radius: 999px;
+        padding: 10px 22px;
+        cursor: pointer;
+        transition: 0.25s;
+      }
+      .pause-btn:hover {
+        background: rgba(194, 72, 119, 0.3);
+        box-shadow: 0 0 22px rgba(194, 86, 122, 0.25);
+      }
+      .pause-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .status {
+        min-height: 22px;
+        margin-top: 15px;
+        font:
+          0.72rem system-ui,
+          sans-serif;
+        color: #d6b8c8;
+        letter-spacing: 0.04em;
+      }
+      .footer {
+        margin-top: 28px;
+        font:
+          0.65rem system-ui,
+          sans-serif;
+        letter-spacing: 0.16em;
+        color: rgba(195, 170, 185, 0.65);
+        text-transform: uppercase;
+      }
+
+      @keyframes tearTop {
+        0% {
+          transform: none;
+        }
+        25% {
+          transform: translateY(-2%) rotate(-1deg);
+        }
+        100% {
+          transform: translate(-8%, -75%) rotate(-9deg);
+          opacity: 0;
+        }
+      }
+      @keyframes tearBottom {
+        0% {
+          transform: none;
+        }
+        25% {
+          transform: translateY(2%) rotate(1deg);
+        }
+        100% {
+          transform: translate(6%, 75%) rotate(7deg);
+          opacity: 0;
+        }
+      }
+      @keyframes beat {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        15% {
+          transform: scale(1.18);
+        }
+        30% {
+          transform: scale(1);
+        }
+        45% {
+          transform: scale(1.12);
+        }
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 0.3;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes drift {
+        from {
+          transform: translate(0, 0) rotate(0deg);
+        }
+        to {
+          transform: translate(3%, -2%) rotate(6deg);
+        }
+      }
+      @keyframes shimmer {
+        to {
+          background-position: 250% center;
+        }
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(24px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes photoIn {
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      @keyframes reveal {
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+      @keyframes equalize {
+        from {
+          height: 4px;
+        }
+        to {
+          height: 22px;
+        }
+      }
+      @keyframes float {
+        from {
+          translate: 0 0;
+        }
+        to {
+          translate: 0 -10px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *:before,
+        *:after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Capa: rasga ao tocar -->
+    <div class="cover" id="cover">
+      <div class="cover-half top">
+        <div class="cover-inner">
+          <span class="heart">♥</span>
+          <p class="cover-text">Tenho uma surpresa para você</p>
+          <p class="cover-hint">toque para abrir</p>
+        </div>
+      </div>
+      <div class="cover-half bottom">
+        <div class="cover-inner">
+          <span class="heart">♥</span>
+          <p class="cover-text">Tenho uma surpresa para você</p>
+          <p class="cover-hint">toque para abrir</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="aurora"></div>
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <div class="vignette"></div>
+
+    <!-- Camada onde as frases vão aparecendo e ficando na tela -->
+    <div class="lyric-layer" id="lyricLayer"></div>
+
+    <main>
+      <section class="card" id="card">
+        <p class="eyebrow">Uma música para você</p>
+
+        <h1>Eve</h1>
+
+        <div class="message">
+          <p>
+            Tem coisas que a gente não consegue dizer em voz alta, então deixo
+            que essa música diga por mim.
+          </p>
+          <p>
+            Cada vez que ouço essa melodia, penso em você, no seu sorriso e em
+            tudo o que você faz ficar mais bonito.
+          </p>
+          <p>Você é a minha parte favorita de qualquer dia.</p>
+        </div>
+
+        <section class="song">
+          <p class="label">Dedicado a você</p>
+          <h2 class="song-title">Alkaline</h2>
+          <p class="artist">Sleep Token</p>
+
+          <div class="equalizer">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i
+            ><i></i><i></i><i></i>
+          </div>
+
+          <label class="volume">
+            Volume
+            <input
+              id="volume"
+              type="range"
+              min="0"
+              max="1"
+              step=".01"
+              value=".35"
+            />
+          </label>
+
+          <button id="pause" class="pause-btn" disabled>❚❚ Pausar</button>
+
+          <p class="status" id="status"></p>
+        </section>
+
+        <img class="photo" src="euiela.png" alt="Foto da Evelyn" />
+
+        <p class="footer">Feito especialmente para você</p>
+      </section>
+    </main>
+
+    <audio id="audio" src="alkaline.mp3" loop preload="auto"></audio>
+
+    <script>
+      const DELAY_SECONDS = 10;
+      const MAX_FRASES = 10; // quantas frases ficam na tela ao mesmo tempo
+
+      /*
+        FRASES SINCRONIZADAS
+        t     = segundo da música em que a frase aparece (conta a partir do início da música)
+        texto = o que aparece na tela. Deixe "" nas linhas que não quiser usar.
+        Os tempos devem estar em ordem crescente.
+      */
+      const LINHAS = [
+        { t: 5, texto: "Seu sorriso é lindo demais" },
+        { t: 11, texto: "Seu jeito de falar me encanta" },
+        { t: 17, texto: "Cada momento com você vale ouro" },
+        { t: 23, texto: "Você ilumina até os dias nublados" },
+        { t: 29, texto: "Não existe lugar onde eu prefira estar" },
+        { t: 35, texto: "Você é a minha parte favorita de tudo" },
+        { t: 41, texto: "Quando você ri, o mundo fica mais leve" },
+        { t: 47, texto: "Eu gosto de como você olha para as coisas" },
+      ];
+
+      // Posições (em % da tela) por onde a frase vai passando
+      const POSICOES = [
+        [18, 18],
+        [82, 18],
+        [50, 12],
+        [82, 50],
+        [82, 82],
+        [18, 82],
+        [50, 88],
+        [18, 50],
+      ];
+
+      const cover = document.getElementById("cover");
+      const card = document.getElementById("card");
+      const canvas = document.getElementById("fx");
+      const ctx = canvas.getContext("2d");
+      const audio = document.getElementById("audio");
+      const statusEl = document.getElementById("status");
+      const volume = document.getElementById("volume");
+      const pauseBtn = document.getElementById("pause");
+      const layer = document.getElementById("lyricLayer");
+
+      let w, h, dpr;
+      let petals = [],
+        sparkles = [],
+        orbs = [],
+        stars = [],
+        mist = [];
+      let audioCtx = null,
+        analyser = null,
+        data = null;
+      let level = 0,
+        prevLevel = 0,
+        tick = 0,
+        burstCooldown = 0,
+        bloom = 0;
+      let pointer = null;
+      let currentLine = -1;
+      let posIndex = 0;
+
+      const PALETTE = [
+        [247, 182, 207],
+        [224, 121, 159],
+        [190, 70, 118],
+        [255, 226, 236],
+      ];
+
+      function resize() {
+        dpr = Math.min(devicePixelRatio || 1, 2);
+        w = innerWidth;
+        h = innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const count = Math.min(34, Math.floor(w / 28));
+        petals = Array.from({ length: count }, () => newPetal(true));
+        orbs = Array.from({ length: 14 }, () => newOrb());
+      }
+      addEventListener("resize", resize);
+
+      function newPetal(anywhere = false) {
+        return {
+          x: Math.random() * w,
+          y: anywhere ? Math.random() * h : -30 - Math.random() * 100,
+          size: 6 + Math.random() * 10,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: 0.4 + Math.random() * 0.7,
+          rot: Math.random() * Math.PI * 2,
+          spin: (Math.random() - 0.5) * 0.03,
+          flip: Math.random() * Math.PI * 2,
+          flipSpeed: 0.02 + Math.random() * 0.03,
+          sway: Math.random() * 6.28,
+          swaySpeed: 0.01 + Math.random() * 0.02,
+          alpha: 0.4 + Math.random() * 0.45,
+          color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+          burst: false,
+        };
+      }
+
+      function newOrb() {
+        return {
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: 40 + Math.random() * 90,
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          phase: Math.random() * 6.28,
+        };
+      }
+
+      function newSparkle(x, y) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 0.5 + Math.random() * 2.5;
+        return {
+          x,
+          y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s - 0.5,
+          life: 1,
+          size: 1 + Math.random() * 2.2,
+          color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+        };
+      }
+
+      // Estrela cadente: surge do alto e atravessa a tela
+      function newStar() {
+        const startX = Math.random() * w * 0.9;
+        const startY = Math.random() * h * 0.45;
+        const angle = Math.PI / 4 + Math.random() * 0.4;
+        const speed = 6 + Math.random() * 6;
+        return {
+          x: startX,
+          y: startY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          trail: [],
+        };
+      }
+
+      // Névoa de luz que nasce no toque/mouse
+      function addMist(x, y, strength = 1) {
+        for (let i = 0; i < 2; i++) {
+          mist.push({
+            x: x + (Math.random() - 0.5) * 10,
+            y: y + (Math.random() - 0.5) * 10,
+            r: 18 + Math.random() * 22,
+            life: 1,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: (Math.random() - 0.5) * 0.6 - 0.2,
+            color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+            strength,
+          });
+        }
+        if (mist.length > 160) mist.splice(0, mist.length - 160);
+      }
+
+      function drawPetal(p, scale) {
+        const [r, g, b] = p.color;
+        const squash = 0.35 + 0.65 * Math.abs(Math.cos(p.flip));
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.scale(scale * squash, scale);
+        ctx.beginPath();
+        ctx.moveTo(0, -p.size);
+        ctx.bezierCurveTo(
+          p.size * 0.95,
+          -p.size * 0.55,
+          p.size * 0.75,
+          p.size * 0.85,
+          0,
+          p.size * 0.5,
+        );
+        ctx.bezierCurveTo(
+          -p.size * 0.75,
+          p.size * 0.85,
+          -p.size * 0.95,
+          -p.size * 0.55,
+          0,
+          -p.size,
+        );
+        ctx.fillStyle = `rgba(${r},${g},${b},${p.alpha})`;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = `rgba(${r},${g},${b},.7)`;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawFlower(cx, cy, radius, open) {
+        const count = 10;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(tick * 0.15);
+        for (let i = 0; i < count; i++) {
+          ctx.save();
+          ctx.rotate(((Math.PI * 2) / count) * i);
+          const len = radius * (0.5 + 0.5 * open) * (1 + level * 0.2);
+          ctx.beginPath();
+          ctx.ellipse(
+            0,
+            -len * 0.55,
+            radius * 0.22 * open,
+            len * 0.55,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fillStyle = `rgba(224,121,159,${0.08 + level * 0.2})`;
+          ctx.shadowBlur = 28;
+          ctx.shadowColor = "rgba(224,121,159,.5)";
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.16 * (0.8 + level * 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,226,236,${0.2 + level * 0.4})`;
+        ctx.shadowBlur = 36;
+        ctx.shadowColor = "rgba(247,182,207,.8)";
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function draw() {
+        tick += 0.008;
+        ctx.clearRect(0, 0, w, h);
+
+        if (analyser && data) {
+          analyser.getByteFrequencyData(data);
+          let sum = 0;
+          const n = Math.min(data.length, 38);
+          for (let i = 2; i < n; i++) sum += data[i];
+          prevLevel = level;
+          level += (sum / (n - 2) / 255 - level) * 0.16;
+        } else {
+          level *= 0.96;
+        }
+
+        // Orbes de luz flutuando
+        for (const o of orbs) {
+          o.x += o.vx + Math.sin(tick + o.phase) * 0.2;
+          o.y += o.vy + Math.cos(tick * 0.8 + o.phase) * 0.2;
+          if (o.x < -o.r) o.x = w + o.r;
+          if (o.x > w + o.r) o.x = -o.r;
+          if (o.y < -o.r) o.y = h + o.r;
+          if (o.y > h + o.r) o.y = -o.r;
+          const rr = o.r * (1 + level * 0.25);
+          const g = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, rr);
+          g.addColorStop(0, `rgba(224,121,159,${0.12 + level * 0.12})`);
+          g.addColorStop(1, "rgba(224,121,159,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(o.x, o.y, rr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Névoa que segue o toque/mouse
+        if (pointer) addMist(pointer.x, pointer.y, 1 + level);
+        for (let i = mist.length - 1; i >= 0; i--) {
+          const m = mist[i];
+          m.x += m.vx;
+          m.y += m.vy;
+          m.life -= 0.018;
+          if (m.life <= 0) {
+            mist.splice(i, 1);
+            continue;
+          }
+          const [r, g, b] = m.color;
+          const rr = m.r * (1 + (1 - m.life) * 0.8);
+          const grad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, rr);
+          grad.addColorStop(
+            0,
+            `rgba(${r},${g},${b},${0.22 * m.life * m.strength})`,
+          );
+          grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, rr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Flor que desabrocha no centro com a música
+        bloom += (0.35 + level * 0.9 - bloom) * 0.08;
+        drawFlower(w / 2, h * 0.4, Math.min(w, h) * 0.22, Math.min(1, bloom));
+
+        // Estrelas cadentes de tempos em tempos
+        if (Math.random() < 0.006 + level * 0.01) stars.push(newStar());
+        for (let i = stars.length - 1; i >= 0; i--) {
+          const s = stars[i];
+          s.trail.push({ x: s.x, y: s.y });
+          if (s.trail.length > 22) s.trail.shift();
+          s.x += s.vx;
+          s.y += s.vy;
+          s.life -= 0.012;
+          if (s.life <= 0 || s.x > w + 80 || s.y > h + 80) {
+            stars.splice(i, 1);
+            continue;
+          }
+          for (let t = 0; t < s.trail.length; t++) {
+            const p = s.trail[t];
+            const a = (t / s.trail.length) * s.life;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 1.6 * (t / s.trail.length), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,226,236,${a * 0.8})`;
+            ctx.fill();
+          }
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${s.life})`;
+          ctx.shadowBlur = 14;
+          ctx.shadowColor = "rgba(247,182,207,.9)";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // Rajadas nas batidas fortes
+        burstCooldown--;
+        if (level - prevLevel > 0.06 && level > 0.35 && burstCooldown <= 0) {
+          for (let i = 0; i < 7; i++) {
+            const p = newPetal(false);
+            p.x = w / 2 + (Math.random() - 0.5) * w * 0.3;
+            p.y = h * 0.4 + (Math.random() - 0.5) * h * 0.15;
+            p.vy = -(1 + Math.random() * 2) * (0.6 + level);
+            p.vx = (Math.random() - 0.5) * 3;
+            p.burst = true;
+            petals.push(p);
+            sparkles.push(newSparkle(p.x, p.y));
+          }
+          burstCooldown = 12;
+        }
+
+        // Pétalas
+        for (let i = petals.length - 1; i >= 0; i--) {
+          const p = petals[i];
+          p.sway += p.swaySpeed;
+          p.flip += p.flipSpeed + level * 0.05;
+          p.x += p.vx + Math.sin(p.sway) * 0.8;
+          p.y += p.vy * (1 + level * 0.6);
+          p.rot += p.spin + level * 0.01;
+          if (p.burst) {
+            p.vy *= 0.985;
+            p.vx *= 0.985;
+            if (p.vy > -0.2) p.burst = false;
+          }
+          drawPetal(p, 1 + level * 0.3);
+
+          if (p.y > h + 40 || p.x < -50 || p.x > w + 50) {
+            if (p.burst) petals.splice(i, 1);
+            else petals[i] = newPetal(false);
+          }
+        }
+        if (petals.length > 80) petals.splice(0, petals.length - 80);
+
+        // Brilhos
+        for (let i = sparkles.length - 1; i >= 0; i--) {
+          const s = sparkles[i];
+          s.x += s.vx;
+          s.y += s.vy;
+          s.vx *= 0.96;
+          s.vy *= 0.96;
+          s.life -= 0.02;
+          if (s.life <= 0) {
+            sparkles.splice(i, 1);
+            continue;
+          }
+          const [r, g, b] = s.color;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},${s.life})`;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = `rgba(${r},${g},${b},.9)`;
+          ctx.fill();
+        }
+        if (sparkles.length > 120) sparkles.splice(0, sparkles.length - 120);
+        ctx.shadowBlur = 0;
+
+        requestAnimationFrame(draw);
+      }
+
+      // ---------- Frases que aparecem e ficam na tela ----------
+      function mostrarFrase(texto) {
+        // Frases anteriores ficam mais apagadas
+        layer
+          .querySelectorAll(".lyric")
+          .forEach((el) => el.classList.add("old"));
+
+        const el = document.createElement("div");
+        el.className = "lyric";
+        el.textContent = texto;
+        layer.appendChild(el);
+
+        // Posição em % da tela, com pequena variação
+        const [px, py] = POSICOES[posIndex % POSICOES.length];
+        posIndex++;
+        const jitterX = (Math.random() - 0.5) * 8;
+        const jitterY = (Math.random() - 0.5) * 6;
+        const meioL = el.offsetWidth / 2;
+        const meioA = el.offsetHeight / 2;
+        const margem = 12;
+
+        let x = ((px + jitterX) / 100) * w;
+        let y = ((py + jitterY) / 100) * h;
+        x = Math.min(Math.max(x, meioL + margem), w - meioL - margem);
+        y = Math.min(Math.max(y, meioA + margem), h - meioA - margem);
+
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.setProperty(
+          "--rot",
+          ((Math.random() - 0.5) * 6).toFixed(1) + "deg",
+        );
+
+        void el.offsetWidth; // garante a transição de entrada
+        el.classList.add("show");
+
+        // Remove as mais antigas se passar do limite
+        while (layer.children.length > MAX_FRASES) {
+          layer.removeChild(layer.firstElementChild);
+        }
+      }
+
+      function updateLyric() {
+        const now = audio.currentTime;
+        let idx = -1;
+        for (let i = 0; i < LINHAS.length; i++) {
+          if (LINHAS[i].t <= now && LINHAS[i].texto.trim() !== "") idx = i;
+        }
+        if (idx === currentLine) return;
+        currentLine = idx;
+
+        // Quando a música recomeça (loop), limpa as frases da volta anterior
+        if (idx === -1) {
+          layer.innerHTML = "";
+          posIndex = 0;
+          return;
+        }
+
+        setTimeout(() => {
+          if (currentLine !== idx) return;
+          mostrarFrase(LINHAS[idx].texto);
+        }, 500);
+      }
+      audio.addEventListener("timeupdate", updateLyric);
+      audio.addEventListener("seeking", () => {
+        currentLine = -2;
+        updateLyric();
+      });
+
+      function setupAnalyser() {
+        try {
+          if (audioCtx) return;
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
+          data = new Uint8Array(analyser.frequencyBinCount);
+          const source = audioCtx.createMediaElementSource(audio);
+          source.connect(analyser);
+          analyser.connect(audioCtx.destination);
+        } catch (e) {
+          analyser = null;
+        }
+      }
+
+      // Névoa segue o dedo e o mouse
+      function setPointer(e) {
+        const pt = e.touches ? e.touches[0] : e;
+        if (pt) pointer = { x: pt.clientX, y: pt.clientY };
+      }
+      addEventListener("mousemove", setPointer);
+      addEventListener("touchmove", setPointer, { passive: true });
+      addEventListener("touchstart", setPointer, { passive: true });
+      document.addEventListener("mouseleave", () => {
+        pointer = null;
+      });
+
+      // Ao tocar na capa: ela se rasga, revela a página e começa a contagem
+      cover.addEventListener(
+        "click",
+        () => {
+          if (cover.classList.contains("tearing")) return;
+
+          setupAnalyser();
+          if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+
+          // Pétalas saindo do rasgo
+          for (let i = 0; i < 40; i++) {
+            const p = newPetal(false);
+            p.x = w / 2 + (Math.random() - 0.5) * 80;
+            p.y = h / 2 + (Math.random() - 0.5) * 80;
+            const a = Math.random() * Math.PI * 2;
+            const s = 2 + Math.random() * 5;
+            p.vx = Math.cos(a) * s;
+            p.vy = Math.sin(a) * s;
+            p.burst = true;
+            petals.push(p);
+          }
+
+          cover.classList.add("tearing");
+
+          setTimeout(() => {
+            cover.classList.add("gone");
+            card.classList.add("reveal");
+          }, 950);
+
+          setTimeout(async () => {
+            try {
+              await audio.play();
+              card.classList.add("playing");
+              pauseBtn.disabled = false;
+              pauseBtn.textContent = "❚❚ Pausar";
+              statusEl.textContent = "Tocando para você…";
+            } catch (e) {
+              statusEl.textContent = "";
+            }
+          }, DELAY_SECONDS * 1000);
+        },
+        { once: true },
+      );
+
+      // Botão de pausa / continuar
+      pauseBtn.addEventListener("click", async () => {
+        if (audio.paused) {
+          await audio.play();
+          card.classList.add("playing");
+          pauseBtn.textContent = "❚❚ Pausar";
+          statusEl.textContent = "Tocando para você…";
+        } else {
+          audio.pause();
+          card.classList.remove("playing");
+          pauseBtn.textContent = "▶ Continuar";
+          statusEl.textContent = "Música pausada.";
+        }
+      });
+
+      volume.addEventListener("input", () => {
+        audio.volume = Number(volume.value);
+      });
+      audio.volume = 0.35;
+
+      resize();
+      draw();
+    </script>
+  </body>
+</html>
